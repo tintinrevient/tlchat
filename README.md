@@ -1,5 +1,11 @@
 # tlchat
 
+## getting started
+
+```
+npm run dev
+```
+
 ## references
 * https://vite.dev/guide/#scaffolding-your-first-vite-project
 * https://www.rabbitholes.ai/
