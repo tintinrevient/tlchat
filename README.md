@@ -6,6 +6,10 @@
 npm run dev
 ```
 
+## todo
+
+- [ ] https://github.com/clockworklabs/SpacetimeDB
+
 ## references
 * https://vite.dev/guide/#scaffolding-your-first-vite-project
 * https://www.rabbitholes.ai/
