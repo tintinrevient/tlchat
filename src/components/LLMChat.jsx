@@ -95,7 +95,7 @@ const LLMChat = ({ onResponse }) => {
     e.preventDefault();
     if (input.trim() && workerRef.current && !isRunning && isModelLoaded) {
       const messages = [
-        { role: "system", content: "You are a helpful assistant." },
+        { role: "system", content: "You are a world-class coder and reply with concise sentences, at most 5 paragraphs" },
         { role: "user", content: input.trim() },
       ];
 

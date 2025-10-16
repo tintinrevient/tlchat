@@ -62,6 +62,8 @@ function LLMChatWrapper() {
 
 export default function App() {
 	const editorRef = useRef(null)
+	const colorIndexRef = useRef(0) // Track which color to use for next generation
+	const generationOffsetRef = useRef(0) // Track offset for each generation
 
 	const handleLLMResponse = (response) => {
 		if (editorRef.current) {
@@ -76,40 +78,69 @@ export default function App() {
 			// Get viewport center
 			const viewport = editor.getViewportPageBounds()
 
+			// Define color rotation
+			const colors = ['yellow', 'light-blue', 'light-green', 'light-violet', 'orange', 'light-red']
+			const currentColor = colors[colorIndexRef.current % colors.length]
+			colorIndexRef.current += 1 // Move to next color for next generation
+
 			// Calculate grid dimensions
-			const noteWidth = 300
+			// Note: tldraw note shapes have a default size of ~200x200 for 's' size
+			const noteWidth = 200
 			const noteHeight = 200
-			const spacing = 40 // Space between notes
+			const spacing = 60 // Space between notes
 			const cols = 3 // Number of columns
 
-			// Calculate starting position to center the grid
+			// Calculate starting position with offset for each generation
+			// This prevents notes from stacking on top of each other
 			const totalWidth = cols * noteWidth + (cols - 1) * spacing
-			const startX = viewport.x + (viewport.w - totalWidth) / 2
-			const startY = viewport.y + 100 // Start from top with some margin
+			const offsetX = (generationOffsetRef.current % 3) * 250 // Horizontal offset
+			const offsetY = Math.floor(generationOffsetRef.current / 3) * 300 // Vertical offset after 3 generations
+			const startX = viewport.x + (viewport.w - totalWidth) / 2 + offsetX
+			const startY = viewport.y + 100 + offsetY // Start from top with some margin plus offset
+			generationOffsetRef.current += 1 // Increment for next generation
 
 			// Create a post-it note for each paragraph
+			// Track row heights to prevent overlapping
+			const rowHeights = {}
+
 			const shapes = paragraphs.map((paragraph, index) => {
 				const shapeId = createShapeId()
 
 				// Arrange post-its in a grid pattern
 				const row = Math.floor(index / cols)
 				const col = index % cols
+
+				// Estimate height based on text length
+				// Rough estimate: ~30 chars per line (note width ~200px), ~25px per line
+				const estimatedLines = Math.max(5, Math.ceil(paragraph.length / 30))
+				const estimatedHeight = Math.max(noteHeight, estimatedLines * 25 + 80) // +80 for padding
+
+				// Track the maximum height in this row
+				if (!rowHeights[row]) {
+					rowHeights[row] = estimatedHeight
+				} else {
+					rowHeights[row] = Math.max(rowHeights[row], estimatedHeight)
+				}
+
+				// Calculate y position based on previous row heights
+				let yOffset = startY
+				for (let r = 0; r < row; r++) {
+					yOffset += (rowHeights[r] || noteHeight) + spacing
+				}
+
 				const x = startX + col * (noteWidth + spacing)
-				const y = startY + row * (noteHeight + spacing)
+				const y = yOffset
 
 				return {
 					id: shapeId,
-					type: 'geo',
+					type: 'note',
 					x: x,
 					y: y,
 					props: {
-						geo: 'rectangle',
-						w: noteWidth,
-						h: noteHeight,
-						color: 'yellow',
-						fill: 'solid',
+						color: currentColor,
 						text: paragraph,
 						size: 's',
+						font: 'mono',
 					},
 				}
 			})
