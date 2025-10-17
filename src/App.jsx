@@ -3,7 +3,6 @@ import { Tldraw, createShapeId } from 'tldraw'
 import 'tldraw/tldraw.css'
 import LLMChat from './components/LLMChat'
 
-// Custom toolbar component that adds robot button next to the toolbar
 function CustomToolbar() {
 	const [isLLMChatOpen, setIsLLMChatOpen] = useState(false)
 
@@ -55,7 +54,6 @@ function CustomToolbar() {
 // Wrapper component to pass editor ref
 function LLMChatWrapper() {
 	return <LLMChat onResponse={(response) => {
-		// Response handling will be done in the main App
 		window.handleLLMResponse?.(response)
 	}} />
 }
@@ -69,12 +67,6 @@ export default function App() {
 		if (editorRef.current) {
 			const editor = editorRef.current
 
-			// Split response into paragraphs
-			const paragraphs = response
-				.split(/\n\n+/)
-				.map(p => p.trim())
-				.filter(p => p.length > 0)
-
 			// Get viewport center
 			const viewport = editor.getViewportPageBounds()
 
@@ -86,74 +78,36 @@ export default function App() {
 			// Calculate grid dimensions
 			// Note: tldraw note shapes have a default size of ~200x200 for 's' size
 			const noteWidth = 200
-			const noteHeight = 200
-			const spacing = 60 // Space between notes
+			const spacing = 60
 			const cols = 3 // Number of columns
 
 			// Calculate starting position with offset for each generation
 			// This prevents notes from stacking on top of each other
 			const totalWidth = cols * noteWidth + (cols - 1) * spacing
-			const offsetX = (generationOffsetRef.current % 3) * 250 // Horizontal offset
-			const offsetY = Math.floor(generationOffsetRef.current / 3) * 300 // Vertical offset after 3 generations
+			const offsetX = (generationOffsetRef.current % 3) * 250
+			const offsetY = Math.floor(generationOffsetRef.current / 3) * 300 // Offset after 3 generations
 			const startX = viewport.x + (viewport.w - totalWidth) / 2 + offsetX
-			const startY = viewport.y + 100 + offsetY // Start from top with some margin plus offset
-			generationOffsetRef.current += 1 // Increment for next generation
+			const startY = viewport.y + 100 + offsetY
+			generationOffsetRef.current += 1
 
-			// Create a post-it note for each paragraph
-			// Track row heights to prevent overlapping
-			const rowHeights = {}
+			const shape = {
+				id: createShapeId(),
+				type: 'note',
+				x: startX,
+				y: startY,
+				props: {
+					color: currentColor,
+					text: response,
+					size: 's',
+					font: 'mono',
+				},
+			}
 
-			const shapes = paragraphs.map((paragraph, index) => {
-				const shapeId = createShapeId()
-
-				// Arrange post-its in a grid pattern
-				const row = Math.floor(index / cols)
-				const col = index % cols
-
-				// Estimate height based on text length
-				// Rough estimate: ~30 chars per line (note width ~200px), ~25px per line
-				const estimatedLines = Math.max(5, Math.ceil(paragraph.length / 30))
-				const estimatedHeight = Math.max(noteHeight, estimatedLines * 25 + 80) // +80 for padding
-
-				// Track the maximum height in this row
-				if (!rowHeights[row]) {
-					rowHeights[row] = estimatedHeight
-				} else {
-					rowHeights[row] = Math.max(rowHeights[row], estimatedHeight)
-				}
-
-				// Calculate y position based on previous row heights
-				let yOffset = startY
-				for (let r = 0; r < row; r++) {
-					yOffset += (rowHeights[r] || noteHeight) + spacing
-				}
-
-				const x = startX + col * (noteWidth + spacing)
-				const y = yOffset
-
-				return {
-					id: shapeId,
-					type: 'note',
-					x: x,
-					y: y,
-					props: {
-						color: currentColor,
-						text: paragraph,
-						size: 's',
-						font: 'mono',
-					},
-				}
-			})
-
-			// Add all shapes to the editor
-			editor.createShapes(shapes)
-
-			// Zoom to fit all new shapes
+			editor.createShapes([shape])
 			editor.zoomToSelection()
 		}
 	}
 
-	// Set up global handler for LLMChatWrapper
 	if (typeof window !== 'undefined') {
 		window.handleLLMResponse = handleLLMResponse
 	}
